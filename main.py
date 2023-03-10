@@ -27,7 +27,7 @@ class Cache:
 cache = Cache()
 sched = BlockingScheduler(timezone=tz, job_defaults={'max_instances': 20})
 
-@sched.scheduled_job('cron', day_of_week='mon-sun', hour=12, minute=40)
+@sched.scheduled_job('cron', day_of_week='mon-sun', hour=17, minute=28)
 def prepare_data():
     api = ShoonyaApiPy()
     # data = api.get_option_chain(index='NIFTY', n=2)

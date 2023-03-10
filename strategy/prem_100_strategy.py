@@ -40,7 +40,7 @@ class Prem100Strategy:
     def prepare_data(self):
         data = self.read_data()
         if data is None:
-            data = self.api.get_option_chain(index=self.config.INSTRUMENT, n=2)
+            data = self.api.get_option_chain(index=self.config.INSTRUMENT, n=10)
             data = self.filter_data(data)
             data = self.transform_data(data)
             self.data = data
@@ -61,6 +61,9 @@ class Prem100Strategy:
         return data
     
     def transform_data(self, data):
+        data["Date"] = datetime.datetime.now().date()
+        data["Time"] = datetime.datetime.now().time()
+        data["Instrument"] = self.config.INSTRUMENT
         data["Trigger Price"] = data["Price"] - data["Price"]*self.config.TRIGGER_PCT/100
         data["Stop Loss"] = data["Trigger Price"] + data["Trigger Price"]*self.config.SL_PCT/100
         data["Target"] = data["Trigger Price"] - data["Trigger Price"]*self.config.TARGET_PCT/100 if self.config.TARGET_PCT is not None else None
