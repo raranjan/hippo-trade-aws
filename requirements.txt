@@ -1,0 +1,11 @@
+fyers-apiv2
+pendulum
+apscheduler
+lib/NorenRestApiPy-0.0.20-py2.py3-none-any.whl
+pyotp
+tabulate
+pandas
+numpy
+yfinance
+nsepython
+pyarrow

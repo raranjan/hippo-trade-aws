@@ -1,0 +1,2 @@
+1. Not exiting at exit time
+2. PNL not getting updated all the time
