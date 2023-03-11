@@ -9,7 +9,7 @@ tz = pytz.timezone(current_timezone)
 
 sched = BlockingScheduler(timezone=tz, job_defaults={'max_instances': 20})
 
-@sched.scheduled_job('cron', day_of_week='mon-sun', hour=14, minute=19)
+@sched.scheduled_job('cron', day_of_week='mon-sun', hour=18, minute=3)
 def prepare_data():
     api = ShoonyaApiPy()
     prem_strategy = Prem100Strategy(Prem100StrategyConfig, api, None)

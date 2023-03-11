@@ -2,6 +2,8 @@ import pandas as pd
 import datetime
 import os
 from telegram import send_message
+import tabulate
+tabulate.PRESERVE_WHITESPACE = True
 
 class Prem100StrategyConfig:
     NAME = "Smart Straddle"
@@ -171,14 +173,12 @@ class Prem100Strategy:
         return data
     
     def send_trade_plan_message(self):
-        first_row = self.data.iloc[0]
-        second_row = self.data.iloc[1]
+        plan_data = self.data
+        plan_data["Strike"] = plan_data['StrikePrice'].astype(str).str.cat(plan_data['OptionType'])
+        plan_data = plan_data[["Strike", "Current Price", "Trigger Price", "Stop Loss"]]
+        plan_data.columns = ["Strike", "CMP", "Entry", "SL"]
 
-        message = f'''
-        Trade Plan:
-        {first_row["StrikePrice"]}{first_row["OptionType"]}@first_row{["Trigger Price"]}
-        {second_row["StrikePrice"]}{second_row["OptionType"]}@second_row{["Trigger Price"]}
-        '''
+        message = tabulate.tabulate(plan_data, headers='keys', tablefmt='orgtbl')
         send_message(message)
 
     def send_entry_exit_message(self, text, row, data_col):
