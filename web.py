@@ -1,7 +1,6 @@
 from flask import Flask, render_template, abort
 import pandas as pd
 from datetime import datetime
-import os
 import glob
 import pandas as pd
 
@@ -29,12 +28,9 @@ def summary():
 def login():
     return render_template('login.html')
 
-
 def read_position_file():
     try:
         data = pd.read_feather(FILE_PATH)
-        print(data)
-        columns = ['Premium', 'Trigger Price', 'Stop Loss', 'Target', 'Lots', 'Position', 'Entry Price', 'Exit Price', 'Current Price', 'PNL']
         return data
     except:
         abort(400)

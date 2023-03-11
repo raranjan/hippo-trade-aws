@@ -1,6 +1,7 @@
 import pandas as pd
 import datetime
 import os
+from telegram import send_message
 
 class Prem100StrategyConfig:
     NAME = "Smart Straddle"
@@ -45,6 +46,7 @@ class Prem100Strategy:
             data = self.transform_data(data)
             self.data = data
             self.store_data()
+            self.send_trade_plan_message()
         else:
             self.data = self.read_data()
         
@@ -167,3 +169,21 @@ class Prem100Strategy:
         
         data = data[data["Entry Price"].notnull()]
         return data
+    
+    def send_trade_plan_message(self):
+        first_row = self.data.iloc[0]
+        second_row = self.data.iloc[1]
+
+        message = f'''
+        Trade Plan:
+        {first_row["StrikePrice"]}{first_row["OptionType"]}@first_row{["Trigger Price"]}
+        {second_row["StrikePrice"]}{second_row["OptionType"]}@second_row{["Trigger Price"]}
+        '''
+        send_message(message)
+
+    def send_entry_exit_message(self, text, row, data_col):
+        message = f'''
+        {text}:
+        {row["StrikePrice"]}{row["OptionType"]}@{row[data_col]}
+        '''
+        send_message(message)

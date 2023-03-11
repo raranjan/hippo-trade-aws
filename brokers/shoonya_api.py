@@ -112,7 +112,7 @@ class ShoonyaApiPy(NorenApi):
     def update_option_chain_with_price(self, row):
         quote = self.get_quotes(exchange=row['Exchange'], token=row['Token'])
         price = float(quote.get('lp'))
-        oi = int(quote.get('oi'))
+        oi = int(quote.get('oi')) if 'oi' in quote else None
         data = {"Exchange": row["Exchange"], "TradingSymbol": row["TradingSymbol"], "OptionType": row["OptionType"], 
                 "StrikePrice": int(row["StrikePrice"]), "Price": price, "OI": oi, "Token": row['Token'], "LotSize": row['LotSize']}
         return data
