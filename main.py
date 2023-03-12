@@ -9,7 +9,7 @@ tz = pytz.timezone(current_timezone)
 
 sched = BlockingScheduler(timezone=tz, job_defaults={'max_instances': 20})
 
-@sched.scheduled_job('cron', day_of_week='mon-sun', hour=17, minute=48)
+@sched.scheduled_job('cron', day_of_week='mon-sun', hour=18, minute=8)
 def prepare_data():
     api = ShoonyaApiPy()
     prem_strategy = Prem100Strategy(Prem100StrategyConfig, api, None)
@@ -31,13 +31,11 @@ def execute_trade_job(api: ShoonyaApiPy, prem_strategy: Prem100Strategy):
 def track_data(prem_strategy: Prem100Strategy):
     data = prem_strategy.get_data()
     data = data[["StrikePrice", "OptionType", "Price", "Position", "Current Price", "Trigger Price", "Entry Price", "Exit Price", "Stop Loss", "PNL"]]
-    print(tabulate(data, headers='keys', tablefmt='psql'))
-    print()
-    print(f"Total PNL = {data['PNL'].sum() * prem_strategy.config.LOT_SIZE:.2f}")
-    print()
+    logger.info(tabulate(data, headers='keys', tablefmt='psql'))
+    logger.info(f"Total PNL = {data['PNL'].sum() * prem_strategy.config.LOT_SIZE:.2f}")
 
     if (data["Entry Price"].count() > 0) & (data["Position"].sum() == 0):
-        print("All positions exited. Hence stoipping the jobs")
+        logger.info("All positions exited. Hence stoipping the jobs")
         stop_running_job()
 
 if __name__ == "__main__":

@@ -9,3 +9,6 @@ numpy
 yfinance
 nsepython
 pyarrow
+bs4
+selenium
+webdriver-manager
