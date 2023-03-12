@@ -9,6 +9,7 @@ class Prem100StrategyConfig:
     NAME = "Smart Straddle"
     DESC = "Straddle with Prem close to 100 at 9:30 am in Nifty"
     INSTRUMENT = 'BANKNIFTY'
+    PREMIUM = 100
     TRIGGER_PCT = 10
     SL_PCT = 30
     TARGET_PCT = None
@@ -48,12 +49,19 @@ class Prem100Strategy:
             data = self.transform_data(data)
             self.data = data
             self.store_data()
-            self.send_trade_plan_message()
         else:
             self.data = self.read_data()
+
+         # Prepare message for telegram
+        plan_data = self.data
+        plan_data["Strike"] = plan_data['StrikePrice'].astype(str).str.cat(plan_data['OptionType'])
+        plan_data = plan_data[["Strike", "Price", "Trigger Price", "Stop Loss"]]
+        plan_data.columns = ["Strike", "CMP", "Entry", "SL"]
+        
+        self.send_trade_plan_message(plan_data)
         
     def filter_data(self, data):
-        filtered_data = data[data["Price"] > 100]
+        filtered_data = data[data["Price"] > self.config.PREMIUM]
         ce_data = filtered_data[filtered_data["OptionType"] == "CE"]
         pe_data = filtered_data[filtered_data["OptionType"] == "PE"]
 
@@ -104,16 +112,20 @@ class Prem100Strategy:
         for index, row in data_for_entry.iterrows():
             self.enter_trade(index, row)
             self.store_data()
+            self.send_entry_exit_message("ENTRY", row)
 
         data_for_exit = self.data[(self.data["Position"] == 1) & (self.data["Current Price"] > self.data["Stop Loss"])]
         for index, row in data_for_exit.iterrows():
             self.exit_trade(index, row)
             self.store_data()
+            self.send_entry_exit_message("EXIT", row)
 
         if self.is_time_to_exit():
             data_with_positions = self.data[self.data["Position"] == 1]
             for index, row in data_with_positions.iterrows():
                 self.exit_trade(index, row)
+                self.send_entry_exit_message("EXIT", row)
+
             self.store_data()
 
     def enter_trade(self, index, row):
@@ -172,18 +184,14 @@ class Prem100Strategy:
         data = data[data["Entry Price"].notnull()]
         return data
     
-    def send_trade_plan_message(self):
-        plan_data = self.data
-        plan_data["Strike"] = plan_data['StrikePrice'].astype(str).str.cat(plan_data['OptionType'])
-        plan_data = plan_data[["Strike", "Current Price", "Trigger Price", "Stop Loss"]]
-        plan_data.columns = ["Strike", "CMP", "Entry", "SL"]
-
-        message = tabulate.tabulate(plan_data, headers='keys', tablefmt='orgtbl')
+    def send_trade_plan_message(self, data):
+        message = tabulate.tabulate(data, headers='keys', tablefmt='orgtbl', showindex=False)
         send_message(message)
 
-    def send_entry_exit_message(self, text, row, data_col):
-        message = f'''
-        {text}:
-        {row["StrikePrice"]}{row["OptionType"]}@{row[data_col]}
-        '''
+    def send_entry_exit_message(self, exit_entry, row):
+        exit_entry_messg = {
+            "EXIT": f'Exit: {row["StrikePrice"]}{row["OptionType"]}@{row["Current Price"]}',
+            "ENTRY": f'Entry: {row["StrikePrice"]}{row["OptionType"]}@{row["Current Price"]}'
+        }
+        message = exit_entry_messg.get(exit_entry)
         send_message(message)
