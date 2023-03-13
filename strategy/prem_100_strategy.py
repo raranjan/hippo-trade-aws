@@ -49,7 +49,6 @@ class Prem100Strategy:
         data = self.read_data()
         if data is None:
             data = self.api.get_option_chain(index=self.config.INSTRUMENT, n=10)
-            print(data)
             data = self.filter_data(data)
             data = self.transform_data(data)
             self.data = data
