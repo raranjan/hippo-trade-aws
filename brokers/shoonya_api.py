@@ -128,9 +128,6 @@ class ShoonyaApiPy(NorenApi):
 
         oi_df = pd.DataFrame(oi_data)
         return oi_df
-
-    def place_order(self, row):
-        pass
     
     def current_positions(self):
         all_positions = []

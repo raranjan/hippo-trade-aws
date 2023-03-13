@@ -1,9 +1,13 @@
 import pandas as pd
 import datetime
+import pytz
 import os
 from telegram import send_message
 import tabulate
 tabulate.PRESERVE_WHITESPACE = True
+
+current_timezone = 'Asia/Kolkata'
+tz = pytz.timezone(current_timezone)
 
 class Prem100StrategyConfig:
     NAME = "Smart Straddle"
@@ -45,6 +49,7 @@ class Prem100Strategy:
         data = self.read_data()
         if data is None:
             data = self.api.get_option_chain(index=self.config.INSTRUMENT, n=10)
+            print(data)
             data = self.filter_data(data)
             data = self.transform_data(data)
             self.data = data
@@ -73,8 +78,8 @@ class Prem100Strategy:
         return data
     
     def transform_data(self, data):
-        data["Date"] = datetime.datetime.now().date()
-        data["Time"] = datetime.datetime.now().time()
+        data["Date"] = datetime.datetime.now().astimezone(tz).date()
+        data["Time"] = datetime.datetime.now().astimezone(tz).time()
         data["Instrument"] = self.config.INSTRUMENT
         data["Trigger Price"] = data["Price"] - data["Price"]*self.config.TRIGGER_PCT/100
         data["Stop Loss"] = data["Trigger Price"] + data["Trigger Price"]*self.config.SL_PCT/100
@@ -98,11 +103,11 @@ class Prem100Strategy:
                 self.data.at[index, "PNL"] = row["Entry Price"] - row["Current Price"]
 
     def is_time_to_enter(self):
-        current_time = datetime.datetime.now().time()
+        current_time = datetime.datetime.now().astimezone(tz).time()
         return (self.entry_time <= current_time <= self.entry_limit_time)
 
     def is_time_to_exit(self):
-        current_time = datetime.datetime.now().time()
+        current_time = datetime.datetime.now().astimezone(tz).time()
         return current_time > self.exit_time
 
     def process_for_trade(self):
@@ -121,37 +126,49 @@ class Prem100Strategy:
             self.send_entry_exit_message("EXIT", row)
 
         if self.is_time_to_exit():
-            data_with_positions = self.data[self.data["Position"] == 1]
+            print("Its time to exit")
+            data_with_positions = self.data[self.data["Position"] >  0]
             for index, row in data_with_positions.iterrows():
                 self.exit_trade(index, row)
                 self.send_entry_exit_message("EXIT", row)
-
             self.store_data()
 
     def enter_trade(self, index, row):
-        order_id = self.place_order(row)
+        buy_or_sell = 'S'
+        trading_symbol = row["TradingSymbol"]
+        quantity = self.config.LOT_SIZE * self.config.LOTS
+
+        order_id = self.place_order_broker(buy_or_sell, trading_symbol=trading_symbol, quantity=quantity)
         self.data.at[index, "Entry Price"] = row["Current Price"]
         self.data.at[index, "Position"] = 1
-        self.data.at[index, "Order Id"] = order_id
+        self.data.at[index, "Order Id"] = f'{order_id}'
         print(f'Entry for Strike: {row["StrikePrice"]}{row["OptionType"]}@{row["Current Price"]}')
 
     def exit_trade(self, index, row):
+        buy_or_sell = 'B'
+        trading_symbol = row["TradingSymbol"]
+        quantity = self.config.LOT_SIZE * self.config.LOTS
+
+        order_id = self.place_order_broker(buy_or_sell, trading_symbol=trading_symbol, quantity=quantity)
         print(f'Exit for Strike: {row["StrikePrice"]}{row["OptionType"]}@{row["Current Price"]}')
         self.data.at[index, "Exit Price"] = row["Current Price"]
         self.data.at[index, "Position"] = 0
+        self.data.at[index, "Order Id"] = f'{self.data.at[index, "Order Id"]}, {order_id}'
 
     def place_order(self, row):
         order_id = 123456
         print(f'Place order for Strike: {row["StrikePrice"]}{row["OptionType"]}@{row["Current Price"]}')
         return order_id
+    
 
-    # def place_order(api, buy_or_sell, trading_symbol, quantity):
-    #     order = api.place_order(buy_or_sell=buy_or_sell, product_type='I', exchange='NFO', tradingsymbol=trading_symbol,
-    #                             quantity=quantity, discloseqty=0, price_type='MKT', price=0, trigger_price=None,
-    #                             retention='DAY', remarks='smart_straddle')
-    #     order_id = order['norenordno']
-    #     print(f"Order Placed - {order_id}")
-    #     return order_id
+    def place_order_broker(self, buy_or_sell, trading_symbol, quantity):
+        order = self.api.place_order(buy_or_sell=buy_or_sell, product_type='I', exchange='NFO', tradingsymbol=trading_symbol,
+                                quantity=quantity, discloseqty=0, price_type='MKT', price=0, trigger_price=None,
+                                retention='DAY', remarks='smart_straddle')
+        order_status = order['stat']
+        order_id = order['norenordno']
+        print(f"Order Placed - {order_id}")
+        return order_id
     
     def get_data(self):
         return self.data
@@ -160,11 +177,11 @@ class Prem100Strategy:
         self.data = data
 
     def store_data(self):
-        path = f'{self.data_path}{datetime.datetime.now().date()}_positions.feather'
+        path = f'{self.data_path}{datetime.datetime.now().astimezone(tz).date()}_positions.feather'
         self.data.to_feather(path)
 
     def read_data(self):
-        path = f'{self.data_path}{datetime.datetime.now().date()}_positions.feather'
+        path = f'{self.data_path}{datetime.datetime.now().astimezone(tz).date()}_positions.feather'
         if os.path.exists(path):
             return pd.read_feather(path)
         else:

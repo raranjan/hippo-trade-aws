@@ -12,3 +12,4 @@ pyarrow
 bs4
 selenium
 webdriver-manager
+feather-format
