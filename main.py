@@ -12,7 +12,7 @@ exit_time = datetime.time(15, 30)
 
 sched = BlockingScheduler(timezone=tz, job_defaults={'max_instances': 20})
 
-@sched.scheduled_job('cron', day_of_week='mon-sun', hour=18, minute=10)
+@sched.scheduled_job('cron', day_of_week='mon-fri', hour=9, minute=30)
 def prepare_data():
     api = ShoonyaApiPy()
     prem_strategy = Prem100Strategy(Prem100StrategyConfig, api, None)
